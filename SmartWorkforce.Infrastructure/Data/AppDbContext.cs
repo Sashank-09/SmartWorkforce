@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SmartWorkforce.Domain.Entities;
-using SmartWorkforce.Infrastructure.Identity;  // ← updated
+using SmartWorkforce.Infrastructure.Identity;
 
 namespace SmartWorkforce.Infrastructure.Data;
 
@@ -17,7 +17,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
-        // Fix decimal precision for Salary
+        
         builder.Entity<Employee>()
             .Property(e => e.Salary)
             .HasColumnType("decimal(18,2)");
