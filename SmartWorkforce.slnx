@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SmartWorkforce.API/SmartWorkforce.API.csproj" />
+  <Project Path="SmartWorkforce.Application/SmartWorkforce.Application.csproj" />
+  <Project Path="SmartWorkforce.Domain/SmartWorkforce.Domain.csproj" />
+  <Project Path="SmartWorkforce.Infrastructure/SmartWorkforce.Infrastructure.csproj" />
+  <Project Path="SmartWorkforce.Shared/SmartWorkforce.Shared.csproj" />
+</Solution>

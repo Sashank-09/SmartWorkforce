@@ -1,0 +1,6 @@
+@SmartWorkforce.API_HostAddress = http://localhost:5211
+
+GET {{SmartWorkforce.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
