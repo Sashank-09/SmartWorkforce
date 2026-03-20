@@ -11,11 +11,16 @@ public class TaskService : ITaskService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
+    private readonly INotificationService _notificationService;
 
-    public TaskService(AppDbContext context, IMapper mapper)
+    public TaskService(
+        AppDbContext context,
+        IMapper mapper,
+        INotificationService notificationService)
     {
         _context = context;
         _mapper = mapper;
+        _notificationService = notificationService;
     }
 
     public async Task<IEnumerable<TaskDto>> GetAllAsync()
@@ -32,7 +37,8 @@ public class TaskService : ITaskService
     public async Task<IEnumerable<TaskDto>> GetMyTasksAsync(string userId)
     {
         var employee = await _context.Employees
-            .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
+            .FirstOrDefaultAsync(e =>
+                e.UserId == userId && !e.IsDeleted);
 
         if (employee == null)
             return Enumerable.Empty<TaskDto>();
@@ -75,11 +81,27 @@ public class TaskService : ITaskService
             .Reference(t => t.AssignedTo)
             .LoadAsync();
 
+        // Send real-time notification to employee
+        if (!string.IsNullOrEmpty(employee.UserId))
+        {
+            var assignedByUser = await _context.Users
+                .FindAsync(assignedById);
+            var assignedByName = assignedByUser != null
+                ? assignedById
+                : "Manager";
+
+            await _notificationService
+                .SendTaskAssignedNotificationAsync(
+                    employee.UserId,
+                    task.Title,
+                    assignedByName);
+        }
+
         return _mapper.Map<TaskDto>(task);
     }
 
     public async Task<TaskDto?> UpdateStatusAsync(
-    Guid id, UpdateTaskStatusDto dto, string userId)
+        Guid id, UpdateTaskStatusDto dto, string userId)
     {
         var task = await _context.Tasks
             .Include(t => t.AssignedTo)
@@ -87,19 +109,21 @@ public class TaskService : ITaskService
 
         if (task == null) return null;
 
-        // Find the employee linked to this userId
         var employee = await _context.Employees
-            .FirstOrDefaultAsync(e => e.UserId == userId && !e.IsDeleted);
+            .FirstOrDefaultAsync(e =>
+                e.UserId == userId && !e.IsDeleted);
 
-        // Check ownership — employee can only update their OWN tasks
-        // Admins and Managers can update any task
         var userRole = _context.Users
             .Where(u => u.Id == userId)
-            .Select(u => ((SmartWorkforce.Infrastructure.Identity.ApplicationUser)u).Role)
+            .Select(u =>
+                ((SmartWorkforce.Infrastructure.Identity
+                    .ApplicationUser)u).Role)
             .FirstOrDefault();
 
-        bool isAdminOrManager = userRole == "Admin" || userRole == "Manager";
-        bool isOwner = employee != null && task.AssignedToId == employee.Id;
+        bool isAdminOrManager =
+            userRole == "Admin" || userRole == "Manager";
+        bool isOwner = employee != null &&
+            task.AssignedToId == employee.Id;
 
         if (!isAdminOrManager && !isOwner)
             throw new UnauthorizedAccessException(
@@ -108,6 +132,21 @@ public class TaskService : ITaskService
         task.Status = dto.Status;
         task.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        // Send notification to the manager who assigned the task
+        if (!string.IsNullOrEmpty(task.AssignedById))
+        {
+            var employeeName = task.AssignedTo != null
+                ? $"{task.AssignedTo.FirstName} {task.AssignedTo.LastName}"
+                : "Employee";
+
+            await _notificationService
+                .SendTaskStatusUpdatedNotificationAsync(
+                    task.AssignedById,
+                    task.Title,
+                    dto.Status.ToString(),
+                    employeeName);
+        }
 
         return _mapper.Map<TaskDto>(task);
     }

@@ -8,6 +8,7 @@ using SmartWorkforce.Infrastructure.Identity;
 using SmartWorkforce.Infrastructure.Services;
 using SmartWorkforce.Domain.Interfaces;
 using SmartWorkforce.Infrastructure.Repositories;
+using SmartWorkforce.API.Hubs;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +54,13 @@ builder.Services.AddAuthentication(options =>
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
+
+// SignalR
+builder.Services.AddSignalR();
+
+// Notification and Analytics Services
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(
@@ -114,4 +122,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<SmartWorkforce.Infrastructure.Services.DynamicHub>("/hubs/notifications"); 
 app.Run();
