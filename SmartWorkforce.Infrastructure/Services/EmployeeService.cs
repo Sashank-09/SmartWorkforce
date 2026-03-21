@@ -49,6 +49,13 @@ public class EmployeeService : IEmployeeService
             throw new Exception("Department not found");
 
         var employee = _mapper.Map<Employee>(dto);
+
+        // Auto-link UserId if a user account exists with same email
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (user != null)
+            employee.UserId = user.Id;
+
         await _context.Employees.AddAsync(employee);
         await _context.SaveChangesAsync();
 
